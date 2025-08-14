@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遊戲後台管理系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #111827;
+            color: #d1d5db;
+        }
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+        .tab-btn.active {
+            border-color: #3b82f6;
+            background-color: #1f2937;
+            color: #eff6ff;
+        }
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.75);
+            z-index: 40;
+        }
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 50;
+        }
+        [v-cloak] {
+            display: none;
+        }
+        .sortable-ghost {
+            background: #374151;
+            opacity: 0.5;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #4b5563;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #3b82f6;
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        .custom-multiselect {
+            position: relative;
+        }
+        .custom-multiselect-options {
+            display: none;
+            position: absolute;
+            background-color: #1f2937;
+            border: 1px solid #4b5563;
+            border-radius: 0.375rem;
+            width: 100%;
+            z-index: 10;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 lg:p-8">
+
+    <div id="app" v-cloak class="max-w-screen-2xl mx-auto">
+        <h1 class="text-2xl font-bold text-white mb-6">遊戲平台管理系統</h1>
+
+        <!-- Tabs -->
+        <div class="mb-6">
+            <div class="border-b border-gray-700">
+                <nav class="-mb-px flex space-x-4" aria-label="Tabs">
+                    <button @click="activeTab = 'gameSettings'" :class="{'active': activeTab === 'gameSettings'}" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm text-gray-400 border-transparent hover:border-gray-500 hover:text-gray-300">
+                        平台遊戲設定
+                    </button>
+                    <button @click="activeTab = 'listSettings'" :class="{'active': activeTab === 'listSettings'}" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm text-gray-400 border-transparent hover:border-gray-500 hover:text-gray-300">
+                        遊戲列表設定
+                    </button>
+                    <button @click="activeTab = 'providerSettings'" :class="{'active': activeTab === 'providerSettings'}" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm text-gray-400 border-transparent hover:border-gray-500 hover:text-gray-300">
+                        遊戲供應商設定
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Tab Content -->
+        <div>
+            <!-- 5.2.1. 模組一：平台遊戲設定 -->
+            <div v-show="activeTab === 'gameSettings'">
+                <div class="bg-gray-800 p-4 rounded-lg shadow-md">
+                    <h2 class="text-lg font-semibold text-white mb-4">篩選 / 搜尋區</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        <!-- 遊戲名稱 -->
+                        <input type="text" placeholder="遊戲名稱" class="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <!-- 遊戲供應商 -->
+                        <div class="custom-multiselect">
+                            <button onclick="toggleDropdown(this)" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-left flex justify-between items-center">
+                                <span>遊戲供應商</span><i data-lucide="chevron-down" class="h-4 w-4"></i>
+                            </button>
+                            <div class="custom-multiselect-options mt-1">
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> FADA</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> JILI</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> PG Soft</label>
+                            </div>
+                        </div>
+                        <!-- 遊戲類型 -->
+                        <div class="custom-multiselect">
+                            <button onclick="toggleDropdown(this)" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-left flex justify-between items-center">
+                                <span>遊戲類型</span><i data-lucide="chevron-down" class="h-4 w-4"></i>
+                            </button>
+                            <div class="custom-multiselect-options mt-1">
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> Slot</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> Fish</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> Poker</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> Arcade</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> Table</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> Others</label>
+                            </div>
+                        </div>
+                        <!-- 排序值 -->
+                        <div class="flex items-center space-x-2">
+                            <input type="number" placeholder="0" class="w-1/2 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                            <span>-</span>
+                            <input type="number" placeholder="99999" class="w-1/2 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <!-- ICON尺寸 -->
+                        <select class="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option>ICON尺寸: 全部</option>
+                            <option>1x1</option>
+                            <option>3x1</option>
+                        </select>
+                        <!-- 使用幣別 -->
+                        <select class="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option>使用幣別: 全部</option>
+                            <option>真金</option>
+                            <option>Combo</option>
+                        </select>
+                        <!-- 遊玩平台 -->
+                        <div class="custom-multiselect">
+                            <button onclick="toggleDropdown(this)" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-left flex justify-between items-center">
+                                <span>遊玩平台</span><i data-lucide="chevron-down" class="h-4 w-4"></i>
+                            </button>
+                            <div class="custom-multiselect-options mt-1">
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> iOS</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> Android</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> HTML5</label>
+                            </div>
+                        </div>
+                        <!-- 入口狀態 -->
+                        <div class="custom-multiselect">
+                            <button onclick="toggleDropdown(this)" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-left flex justify-between items-center">
+                                <span>入口狀態</span><i data-lucide="chevron-down" class="h-4 w-4"></i>
+                            </button>
+                            <div class="custom-multiselect-options mt-1">
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> 全部</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> 開啟</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> 隱藏</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> 鎖定</label>
+                            </div>
+                        </div>
+                         <!-- 特徵標籤 -->
+                        <div class="custom-multiselect">
+                            <button onclick="toggleDropdown(this)" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-left flex justify-between items-center">
+                                <span>特徵標籤</span><i data-lucide="chevron-down" class="h-4 w-4"></i>
+                            </button>
+                            <div class="custom-multiselect-options mt-1">
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> HOT</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> NEW</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> EVENT</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> COMING</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex justify-end space-x-2">
+                        <button class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md text-sm">清除條件</button>
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">搜尋</button>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-gray-800 p-4 rounded-lg shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-white">遊戲列表</h2>
+                        <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md text-sm">批次設定狀態</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-400">
+                            <thead class="text-xs text-gray-300 uppercase bg-gray-700">
+                                <tr>
+                                    <th scope="col" class="p-4"><input type="checkbox"></th>
+                                    <th scope="col" class="px-6 py-3">操作</th>
+                                    <th scope="col" class="px-6 py-3">入口狀態</th>
+                                    <th scope="col" class="px-6 py-3">特徵標籤</th>
+                                    <th scope="col" class="px-6 py-3">ICON尺寸</th>
+                                    <th scope="col" class="px-6 py-3">遊戲排序</th>
+                                    <th scope="col" class="px-6 py-3">遊戲ID</th>
+                                    <th scope="col" class="px-6 py-3">ICON圖示</th>
+                                    <th scope="col" class="px-6 py-3">遊戲名稱(中)</th>
+                                    <th scope="col" class="px-6 py-3">遊戲名稱(英)</th>
+                                    <th scope="col" class="px-6 py-3">遊戲供應商</th>
+                                    <th scope="col" class="px-6 py-3">遊戲類型</th>
+                                    <th scope="col" class="px-6 py-3">使用幣別</th>
+                                    <th scope="col" class="px-6 py-3">遊玩平台</th>
+                                    <th scope="col" class="px-6 py-3">最後異動時間/人員</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 範例資料 -->
+                                <tr class="bg-gray-800 border-b border-gray-700 hover:bg-gray-700">
+                                    <td class="w-4 p-4"><input type="checkbox"></td>
+                                    <td class="px-6 py-4 flex space-x-2">
+                                        <button onclick="openModal('editGameModal')" class="text-blue-400 hover:text-blue-300"><i data-lucide="edit" class="h-5 w-5"></i></button>
+                                        <button class="text-gray-400 hover:text-gray-300"><i data-lucide="eye" class="h-5 w-5"></i></button>
+                                    </td>
+                                    <td class="px-6 py-4"><span class="bg-green-900 text-green-300 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">開啟</span></td>
+                                    <td class="px-6 py-4">
+                                        <span class="bg-red-900 text-red-300 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">HOT</span>
+                                        <span class="bg-blue-900 text-blue-300 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">NEW</span>
+                                    </td>
+                                    <td class="px-6 py-4">1x1</td>
+                                    <td class="px-6 py-4">10</td>
+                                    <td class="px-6 py-4">1001</td>
+                                    <td class="px-6 py-4"><img src="https://placehold.co/40x40/374151/FFF?text=G1" class="w-10 h-10 rounded"></td>
+                                    <td class="px-6 py-4">發財象神</td>
+                                    <td class="px-6 py-4">Ganesha Fortune</td>
+                                    <td class="px-6 py-4">PG Soft</td>
+                                    <td class="px-6 py-4">Slot</td>
+                                    <td class="px-6 py-4">真金</td>
+                                    <td class="px-6 py-4">HTML5, iOS</td>
+                                    <td class="px-6 py-4">2023-10-27 10:00<br>Admin</td>
+                                </tr>
+                                 <tr class="bg-gray-800 border-b border-gray-700 hover:bg-gray-700">
+                                    <td class="w-4 p-4"><input type="checkbox"></td>
+                                    <td class="px-6 py-4 flex space-x-2">
+                                        <button onclick="openModal('editGameModal')" class="text-blue-400 hover:text-blue-300"><i data-lucide="edit" class="h-5 w-5"></i></button>
+                                        <button class="text-gray-400 hover:text-gray-300"><i data-lucide="eye" class="h-5 w-5"></i></button>
+                                    </td>
+                                    <td class="px-6 py-4"><span class="bg-yellow-900 text-yellow-300 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">隱藏</span></td>
+                                    <td class="px-6 py-4">
+                                        <span class="bg-purple-900 text-purple-300 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">EVENT</span>
+                                    </td>
+                                    <td class="px-6 py-4">3x1</td>
+                                    <td class="px-6 py-4">25</td>
+                                    <td class="px-6 py-4">2005</td>
+                                    <td class="px-6 py-4"><img src="https://placehold.co/120x40/374151/FFF?text=Game+2" class="w-30 h-10 rounded"></td>
+                                    <td class="px-6 py-4">龍王捕魚</td>
+                                    <td class="px-6 py-4">Dragon Fishing</td>
+                                    <td class="px-6 py-4">JILI</td>
+                                    <td class="px-6 py-4">Fish</td>
+                                    <td class="px-6 py-4">真金, Combo</td>
+                                    <td class="px-6 py-4">HTML5, Android</td>
+                                    <td class="px-6 py-4">2023-10-26 15:30<br>Operator</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5.2.2. 模組二：遊戲列表設定 -->
+            <div v-show="activeTab === 'listSettings'">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 主導航列設定 -->
+                    <div class="bg-gray-800 p-4 rounded-lg shadow-md">
+                        <h2 class="text-lg font-semibold text-white mb-4">主導航列設定</h2>
+                        <ul id="mainNavList" class="space-y-2">
+                            <li class="flex items-center justify-between p-3 bg-gray-700 rounded-md">
+                                <div class="flex items-center space-x-3">
+                                    <i data-lucide="grip-vertical" class="cursor-move text-gray-500"></i>
+                                    <span>Lobby</span>
+                                </div>
+                                <label class="toggle-switch"><input type="checkbox" checked onchange="showConfirmation('資料已變動，是否儲存？')"><span class="slider"></span></label>
+                            </li>
+                            <li class="flex items-center justify-between p-3 bg-gray-700 rounded-md">
+                                <div class="flex items-center space-x-3">
+                                    <i data-lucide="grip-vertical" class="cursor-move text-gray-500"></i>
+                                    <span>Slot</span>
+                                </div>
+                                <label class="toggle-switch"><input type="checkbox" checked onchange="showConfirmation('資料已變動，是否儲存？')"><span class="slider"></span></label>
+                            </li>
+                             <li class="flex items-center justify-between p-3 bg-gray-700 rounded-md">
+                                <div class="flex items-center space-x-3">
+                                    <i data-lucide="grip-vertical" class="cursor-move text-gray-500"></i>
+                                    <span>Fish</span>
+                                </div>
+                                <label class="toggle-switch"><input type="checkbox" checked onchange="showConfirmation('資料已變動，是否儲存？')"><span class="slider"></span></label>
+                            </li>
+                             <li class="flex items-center justify-between p-3 bg-gray-700 rounded-md">
+                                <div class="flex items-center space-x-3">
+                                    <i data-lucide="grip-vertical" class="cursor-move text-gray-500"></i>
+                                    <span>FADA</span>
+                                </div>
+                                <label class="toggle-switch"><input type="checkbox" disabled><span class="slider"></span></label>
+                                <span class="text-xs text-gray-400 ml-2">無遊戲，不可開啟</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Lobby頁籤設定 -->
+                    <div class="bg-gray-800 p-4 rounded-lg shadow-md">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold text-white">Lobby頁籤設定</h2>
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">新增頁籤</button>
+                        </div>
+                        <ul id="lobbyTabList" class="space-y-2">
+                            <li class="p-3 bg-gray-700 rounded-md">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <i data-lucide="grip-vertical" class="cursor-move text-gray-500"></i>
+                                        <span>HOT (不可修改)</span>
+                                    </div>
+                                    <div class="flex items-center space-x-3">
+                                        <label class="toggle-switch"><input type="checkbox" checked onchange="showConfirmation('資料已變動，是否儲存？')"><span class="slider"></span></label>
+                                        <button onclick="openModal('editLobbyTabModal')" class="text-blue-400 hover:text-blue-300"><i data-lucide="list-plus" class="h-5 w-5"></i></button>
+                                        <button class="text-gray-600 cursor-not-allowed"><i data-lucide="trash-2" class="h-5 w-5"></i></button>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-gray-400 mt-2 pl-8">最後異動: 2023-10-27 11:00 / Admin</div>
+                            </li>
+                             <li class="p-3 bg-gray-700 rounded-md">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <i data-lucide="grip-vertical" class="cursor-move text-gray-500"></i>
+                                        <span>NEW (不可修改)</span>
+                                    </div>
+                                    <div class="flex items-center space-x-3">
+                                        <label class="toggle-switch"><input type="checkbox" checked onchange="showConfirmation('資料已變動，是否儲存？')"><span class="slider"></span></label>
+                                        <button onclick="openModal('editLobbyTabModal')" class="text-blue-400 hover:text-blue-300"><i data-lucide="list-plus" class="h-5 w-5"></i></button>
+                                        <button class="text-gray-600 cursor-not-allowed"><i data-lucide="trash-2" class="h-5 w-5"></i></button>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-gray-400 mt-2 pl-8">最後異動: 2023-10-27 11:05 / Admin</div>
+                            </li>
+                             <li class="p-3 bg-gray-700 rounded-md">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <i data-lucide="grip-vertical" class="cursor-move text-gray-500"></i>
+                                        <span>My Favorites</span>
+                                    </div>
+                                    <div class="flex items-center space-x-3">
+                                        <label class="toggle-switch"><input type="checkbox" onchange="showConfirmation('資料已變動，是否儲存？')"><span class="slider"></span></label>
+                                        <button onclick="openModal('editLobbyTabModal')" class="text-blue-400 hover:text-blue-300"><i data-lucide="list-plus" class="h-5 w-5"></i></button>
+                                        <button class="text-red-500 hover:text-red-400"><i data-lucide="trash-2" class="h-5 w-5"></i></button>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-gray-400 mt-2 pl-8">最後異動: 2023-10-25 09:00 / System</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5.2.3. 模組三：遊戲供應商設定 -->
+            <div v-show="activeTab === 'providerSettings'">
+                 <div class="bg-gray-800 p-4 rounded-lg shadow-md">
+                    <h2 class="text-lg font-semibold text-white mb-4">篩選 / 搜尋區</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        <!-- 遊戲供應商 -->
+                        <div class="custom-multiselect">
+                            <button onclick="toggleDropdown(this)" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-left flex justify-between items-center">
+                                <span>遊戲供應商</span><i data-lucide="chevron-down" class="h-4 w-4"></i>
+                            </button>
+                            <div class="custom-multiselect-options mt-1">
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> FADA</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> JILI</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> PG Soft</label>
+                            </div>
+                        </div>
+                        <!-- 遊戲類型 -->
+                        <div class="custom-multiselect">
+                            <button onclick="toggleDropdown(this)" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-left flex justify-between items-center">
+                                <span>遊戲類型</span><i data-lucide="chevron-down" class="h-4 w-4"></i>
+                            </button>
+                            <div class="custom-multiselect-options mt-1">
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> Slot</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> Fish</label>
+                            </div>
+                        </div>
+                        <!-- 使用幣別 -->
+                        <select class="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option>使用幣別: 全部</option>
+                            <option>真金</option>
+                            <option>Combo</option>
+                        </select>
+                        <!-- 遊玩平台 -->
+                        <div class="custom-multiselect">
+                            <button onclick="toggleDropdown(this)" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-left flex justify-between items-center">
+                                <span>遊玩平台</span><i data-lucide="chevron-down" class="h-4 w-4"></i>
+                            </button>
+                            <div class="custom-multiselect-options mt-1">
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> iOS</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> Android</label>
+                                <label class="block px-3 py-2 hover:bg-gray-600"><input type="checkbox" class="mr-2"> HTML5</label>
+                            </div>
+                        </div>
+                        <!-- 狀態 -->
+                        <select class="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option>狀態: 全部</option>
+                            <option>開啟</option>
+                            <option>隱藏</option>
+                        </select>
+                    </div>
+                    <div class="mt-4 flex justify-end space-x-2">
+                        <button class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md text-sm">清除條件</button>
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">搜尋</button>
+                    </div>
+                </div>
+                <div class="mt-6 bg-gray-800 p-4 rounded-lg shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-white">供應商列表</h2>
+                        <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md text-sm">批次設定狀態</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-400">
+                            <thead class="text-xs text-gray-300 uppercase bg-gray-700">
+                                <tr>
+                                    <th scope="col" class="p-4"><input type="checkbox"></th>
+                                    <th scope="col" class="px-6 py-3">操作</th>
+                                    <th scope="col" class="px-6 py-3">狀態</th>
+                                    <th scope="col" class="px-6 py-3">供應商名稱(英)</th>
+                                    <th scope="col" class="px-6 py-3">供應商Logo</th>
+                                    <th scope="col" class="px-6 py-3">遊戲類型</th>
+                                    <th scope="col" class="px-6 py-3">使用幣別</th>
+                                    <th scope="col" class="px-6 py-3">遊玩平台</th>
+                                    <th scope="col" class="px-6 py-3">最後異動時間/人員</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="bg-gray-800 border-b border-gray-700 hover:bg-gray-700">
+                                    <td class="w-4 p-4"><input type="checkbox"></td>
+                                    <td class="px-6 py-4 flex space-x-2">
+                                        <button onclick="openModal('editProviderModal')" class="text-blue-400 hover:text-blue-300"><i data-lucide="edit" class="h-5 w-5"></i></button>
+                                        <button class="text-gray-400 hover:text-gray-300"><i data-lucide="eye" class="h-5 w-5"></i></button>
+                                    </td>
+                                    <td class="px-6 py-4"><label class="toggle-switch"><input type="checkbox" checked onchange="showConfirmation('資料已變動，是否儲存？')"><span class="slider"></span></label></td>
+                                    <td class="px-6 py-4">PG Soft</td>
+                                    <td class="px-6 py-4"><img src="https://placehold.co/80x40/374151/FFF?text=PG" class="w-20 h-10 rounded object-contain"></td>
+                                    <td class="px-6 py-4">Slot, Table</td>
+                                    <td class="px-6 py-4">真金</td>
+                                    <td class="px-6 py-4">HTML5, iOS, Android</td>
+                                    <td class="px-6 py-4">2023-10-20 12:00<br>Admin</td>
+                                </tr>
+                                <tr class="bg-gray-800 border-b border-gray-700 hover:bg-gray-700">
+                                    <td class="w-4 p-4"><input type="checkbox"></td>
+                                    <td class="px-6 py-4 flex space-x-2">
+                                        <button onclick="openModal('editProviderModal')" class="text-blue-400 hover:text-blue-300"><i data-lucide="edit" class="h-5 w-5"></i></button>
+                                        <button class="text-gray-400 hover:text-gray-300"><i data-lucide="eye" class="h-5 w-5"></i></button>
+                                    </td>
+                                    <td class="px-6 py-4"><label class="toggle-switch"><input type="checkbox" onchange="showConfirmation('資料已變動，是否儲存？')"><span class="slider"></span></label></td>
+                                    <td class="px-6 py-4">JILI</td>
+                                    <td class="px-6 py-4"><img src="https://placehold.co/80x40/374151/FFF?text=JILI" class="w-20 h-10 rounded object-contain"></td>
+                                    <td class="px-6 py-4">Slot, Fish</td>
+                                    <td class="px-6 py-4">真金, Combo</td>
+                                    <td class="px-6 py-4">HTML5, Android</td>
+                                    <td class="px-6 py-4">2023-10-19 18:00<br>Admin</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <!-- Edit Game Modal -->
+        <div id="editGameModal" class="modal-backdrop hidden">
+            <div class="modal bg-gray-800 rounded-lg shadow-xl w-11/12 md:w-2/3 lg:w-1/2 max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+                    <h3 class="text-xl font-semibold text-white">編輯遊戲</h3>
+                    <button onclick="closeModal('editGameModal', true)" class="text-gray-400 hover:text-white"><i data-lucide="x" class="h-6 w-6"></i></button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><span class="font-semibold">遊戲名稱(中):</span> 發財象神</div>
+                        <div><span class="font-semibold">遊戲名稱(英):</span> Ganesha Fortune</div>
+                        <div><span class="font-semibold">遊戲ID:</span> 1001</div>
+                        <div><span class="font-semibold">所屬供應商:</span> PG Soft</div>
+                        <div><span class="font-semibold">上架時間:</span> 2023-01-15 10:00</div>
+                        <div><span class="font-semibold">遊戲類型:</span> Slot</div>
+                    </div>
+                    <hr class="border-gray-700">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block mb-2 text-sm font-medium">使用幣別</label>
+                            <div class="flex space-x-4">
+                                <label><input type="checkbox" checked class="mr-1"> 真金</label>
+                                <label><input type="checkbox" class="mr-1"> Combo</label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block mb-2 text-sm font-medium">遊玩平台</label>
+                            <div class="flex space-x-4">
+                                <label><input type="checkbox" checked class="mr-1"> iOS</label>
+                                <label><input type="checkbox" class="mr-1"> Android</label>
+                                <label><input type="checkbox" checked class="mr-1"> HTML5</label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block mb-2 text-sm font-medium">Lobby 排序</label>
+                            <input type="number" value="10" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block mb-2 text-sm font-medium">HOT 列表排序</label>
+                            <input type="number" value="5" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                             <label class="block mb-2 text-sm font-medium">ICON 尺寸</label>
+                             <select class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm">
+                                <option>1x1</option>
+                                <option>3x1</option>
+                             </select>
+                        </div>
+                        <div>
+                             <label class="block mb-2 text-sm font-medium">入口狀態</label>
+                             <select class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm">
+                                <option>開啟</option>
+                                <option>隱藏</option>
+                                <option>鎖定</option>
+                             </select>
+                        </div>
+                        <div>
+                            <label class="block mb-2 text-sm font-medium">ICON 修改 (1x1)</label>
+                            <div class="flex items-center space-x-2">
+                                <img src="https://placehold.co/40x40/374151/FFF?text=G1" class="w-10 h-10 rounded">
+                                <input type="file" class="text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700">
+                            </div>
+                        </div>
+                         <div>
+                            <label class="block mb-2 text-sm font-medium">ICON 修改 (3x1)</label>
+                             <div class="flex items-center space-x-2">
+                                <img src="https://placehold.co/120x40/374151/FFF?text=Game+1" class="w-30 h-10 rounded">
+                                <input type="file" class="text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block mb-2 text-sm font-medium">特徵標籤</label>
+                            <div class="flex items-center space-x-4">
+                                <span>HOT</span> <label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label>
+                                <span>NEW</span> <label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label>
+                                <span>EVENT</span> <label class="toggle-switch"><input type="checkbox"><span class="slider"></span></label>
+                                <span>COMING</span> <label class="toggle-switch"><input type="checkbox"><span class="slider"></span></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 bg-gray-900/50 flex justify-end space-x-2">
+                    <button onclick="closeModal('editGameModal', true)" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md text-sm">取消</button>
+                    <button onclick="showConfirmation('確認儲存變更？', () => closeModal('editGameModal'))" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">儲存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Lobby Tab Modal -->
+        <div id="editLobbyTabModal" class="modal-backdrop hidden">
+            <div class="modal bg-gray-800 rounded-lg shadow-xl w-11/12 md:w-3/4 lg:w-2/3 max-h-[90vh] flex flex-col">
+                 <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+                    <h3 class="text-xl font-semibold text-white">編輯 'HOT' 頁籤遊戲</h3>
+                    <button onclick="closeModal('editLobbyTabModal', true)" class="text-gray-400 hover:text-white"><i data-lucide="x" class="h-6 w-6"></i></button>
+                </div>
+                <div class="p-6 flex-grow overflow-hidden grid grid-cols-2 gap-4">
+                    <!-- Left Panel -->
+                    <div class="flex flex-col h-full">
+                        <h4 class="font-semibold mb-2">此標籤內的遊戲 (可拖曳排序)</h4>
+                        <div class="bg-gray-900 rounded-md p-2 flex-grow overflow-y-auto">
+                            <ul id="gamesInTab" class="space-y-2">
+                                <li class="flex items-center justify-between p-2 bg-gray-700 rounded"><span><i data-lucide="grip-vertical" class="inline-block mr-2 h-4 w-4 cursor-move"></i>發財象神</span><button class="text-red-500 hover:text-red-400"><i data-lucide="x-circle" class="h-5 w-5"></i></button></li>
+                                <li class="flex items-center justify-between p-2 bg-gray-700 rounded"><span><i data-lucide="grip-vertical" class="inline-block mr-2 h-4 w-4 cursor-move"></i>麻將胡了</span><button class="text-red-500 hover:text-red-400"><i data-lucide="x-circle" class="h-5 w-5"></i></button></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Right Panel -->
+                    <div class="flex flex-col h-full">
+                        <h4 class="font-semibold mb-2">所有可加入的遊戲</h4>
+                        <input type="text" placeholder="搜尋遊戲..." class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm mb-2">
+                        <div class="bg-gray-900 rounded-md p-2 flex-grow overflow-y-auto">
+                            <ul class="space-y-2">
+                                <li class="flex items-center justify-between p-2 bg-gray-700 rounded"><span>龍王捕魚</span><button class="text-green-500 hover:text-green-400"><i data-lucide="plus-circle" class="h-5 w-5"></i></button></li>
+                                <li class="flex items-center justify-between p-2 bg-gray-700 rounded"><span>水果派對</span><button class="text-green-500 hover:text-green-400"><i data-lucide="plus-circle" class="h-5 w-5"></i></button></li>
+                                <li class="flex items-center justify-between p-2 bg-gray-700 rounded"><span>雷神之鎚</span><button class="text-green-500 hover:text-green-400"><i data-lucide="plus-circle" class="h-5 w-5"></i></button></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 bg-gray-900/50 flex justify-end space-x-2">
+                    <button onclick="closeModal('editLobbyTabModal', true)" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md text-sm">取消</button>
+                    <button onclick="showConfirmation('確認儲存變更？', () => closeModal('editLobbyTabModal'))" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">儲存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Provider Modal -->
+         <div id="editProviderModal" class="modal-backdrop hidden">
+            <div class="modal bg-gray-800 rounded-lg shadow-xl w-11/12 md:w-2/3 lg:w-1/2 max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+                    <h3 class="text-xl font-semibold text-white">編輯遊戲供應商</h3>
+                    <button onclick="closeModal('editProviderModal', true)" class="text-gray-400 hover:text-white"><i data-lucide="x" class="h-6 w-6"></i></button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><span class="font-semibold">供應商名稱(英):</span> PG Soft</div>
+                        <div><span class="font-semibold">上架時間:</span> 2022-08-01 09:00</div>
+                    </div>
+                    <hr class="border-gray-700">
+                     <div>
+                        <label class="block mb-2 text-sm font-medium">Logo 上傳/檢視</label>
+                        <div class="flex items-center space-x-2">
+                            <img src="https://placehold.co/80x40/374151/FFF?text=PG" class="w-20 h-10 rounded object-contain bg-gray-700">
+                            <input type="file" class="text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-sm font-medium">使用幣別</label>
+                        <div class="flex space-x-4">
+                            <label><input type="checkbox" checked class="mr-1"> 真金</label>
+                            <label><input type="checkbox" class="mr-1"> Combo</label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-sm font-medium">遊玩平台狀態</label>
+                        <div class="space-y-2 p-3 bg-gray-900/50 rounded-md">
+                            <div class="flex justify-between items-center"><span>iOS</span> <label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+                            <div class="flex justify-between items-center"><span>Android</span> <label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+                            <div class="flex justify-between items-center"><span>HTML5</span> <label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">若非全開或全隱藏，外部列表的狀態Toggle將會禁用。</p>
+                    </div>
+                </div>
+                <div class="p-4 bg-gray-900/50 flex justify-end space-x-2">
+                    <button onclick="closeModal('editProviderModal', true)" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md text-sm">取消</button>
+                    <button onclick="showConfirmation('確認儲存變更？', () => closeModal('editProviderModal'))" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">儲存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div id="confirmationModal" class="modal-backdrop hidden">
+            <div class="modal bg-gray-800 rounded-lg shadow-xl w-11/12 sm:w-1/3">
+                <div class="p-6">
+                    <h3 id="confirmationMessage" class="text-lg font-semibold text-white mb-4"></h3>
+                    <div class="flex justify-end space-x-2">
+                        <button id="confirmCancel" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md text-sm">取消</button>
+                        <button id="confirmOk" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm">確認</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // --- Vue App for simple state management ---
+    const { createApp } = Vue;
+    createApp({
+        data() {
+            return {
+                activeTab: 'gameSettings',
+            }
+        }
+    }).mount('#app');
+
+    // --- Modal Logic ---
+    let confirmCallback = null;
+    let cancelCallback = null;
+
+    function openModal(modalId) {
+        document.getElementById(modalId).classList.remove('hidden');
+    }
+
+    function closeModal(modalId, confirmLeave = false) {
+        if (confirmLeave) {
+            showConfirmation('資料尚未儲存，確定要離開嗎？', () => {
+                document.getElementById(modalId).classList.add('hidden');
+            });
+        } else {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+    }
+
+    function showConfirmation(message, onConfirm, onCancel) {
+        document.getElementById('confirmationMessage').textContent = message;
+        const confirmModal = document.getElementById('confirmationModal');
+        confirmModal.classList.remove('hidden');
+
+        confirmCallback = () => {
+            if (onConfirm) onConfirm();
+            hideConfirmation();
+        };
+        cancelCallback = () => {
+            if (onCancel) onCancel();
+            hideConfirmation();
+        };
+
+        document.getElementById('confirmOk').onclick = confirmCallback;
+        document.getElementById('confirmCancel').onclick = cancelCallback;
+    }
+
+    function hideConfirmation() {
+        document.getElementById('confirmationModal').classList.add('hidden');
+    }
+
+    // --- Custom Multiselect Dropdown Logic ---
+    function toggleDropdown(button) {
+        const options = button.nextElementSibling;
+        if (options.style.display === 'block') {
+            options.style.display = 'none';
+        } else {
+            options.style.display = 'block';
+        }
+    }
+    // Close dropdown if clicked outside
+    window.addEventListener('click', function(e) {
+        document.querySelectorAll('.custom-multiselect').forEach(el => {
+            if (!el.contains(e.target)) {
+                el.querySelector('.custom-multiselect-options').style.display = 'none';
+            }
+        });
+    });
+
+    // --- SortableJS Initialization ---
+    document.addEventListener('DOMContentLoaded', (event) => {
+        const mainNavList = document.getElementById('mainNavList');
+        if(mainNavList) new Sortable(mainNavList, { animation: 150, handle: '[data-lucide="grip-vertical"]' });
+
+        const lobbyTabList = document.getElementById('lobbyTabList');
+        if(lobbyTabList) new Sortable(lobbyTabList, { animation: 150, handle: '[data-lucide="grip-vertical"]' });
+        
+        const gamesInTab = document.getElementById('gamesInTab');
+        if(gamesInTab) new Sortable(gamesInTab, { animation: 150, handle: '[data-lucide="grip-vertical"]' });
+    });
+
+    // --- Lucide Icons ---
+    lucide.createIcons();
+    </script>
+</body>
+</html>
